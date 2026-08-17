@@ -25,11 +25,8 @@
 package com.iluwatar.masterworker;
 
 import com.iluwatar.masterworker.system.ArrayTransposeMasterWorker;
-import com.iluwatar.masterworker.system.MasterWorker;
 import com.iluwatar.masterworker.system.systemmaster.ArrayTransposeMaster;
-import com.iluwatar.masterworker.system.systemmaster.Master;
 import com.iluwatar.masterworker.system.systemworkers.ArrayTransposeWorker;
-import com.iluwatar.masterworker.system.systemworkers.Worker;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -41,19 +38,11 @@ import lombok.extern.slf4j.Slf4j;
  * communication is between the master and the worker - none of the workers communicate among one
  * another and the user only communicates with the master to get required job done.
  *
- * <p>In our example, we have generic abstract classes {@link MasterWorker}, {@link Master} and
- * {@link Worker} which have to be extended by the classes which will perform the specific job at
- * hand (in this case finding transpose of matrix, done by {@link ArrayTransposeMasterWorker},
- * {@link ArrayTransposeMaster} and {@link ArrayTransposeWorker}). The Master class divides the work
- * into parts to be given to the workers, collects the results from the workers and aggregates it
- * when all workers have responded before returning the solution. The Worker class extends the
- * Thread class to enable parallel processing, and does the work once the data has been received
- * from the Master. The MasterWorker contains a reference to the Master class, gets the input from
- * the App and passes it on to the Master. These 3 classes define the system which computes the
- * result. We also have 2 abstract classes {@link Input} and {@link Result}, which contain the input
- * data and result data respectively. The Input class also has an abstract method divideData which
- * defines how the data is to be divided into segments. These classes are extended by {@link
- * ArrayInput} and {@link ArrayResult}.
+ * <p>In our example, {@link ArrayTransposeMasterWorker} is the entry point used by clients. It
+ * holds an {@link ArrayTransposeMaster}, which divides the input matrix into row-chunks, starts
+ * one {@link ArrayTransposeWorker} thread per chunk, waits for them to finish, and reassembles
+ * their partial results into the final transposed matrix. {@link ArrayInput} and {@link
+ * ArrayResult} are simple wrappers around the matrix data passed between master and workers.
  */
 @Slf4j
 public class App {

@@ -24,21 +24,24 @@
  */
 package com.iluwatar.masterworker.system;
 
+import com.iluwatar.masterworker.ArrayInput;
+import com.iluwatar.masterworker.ArrayResult;
 import com.iluwatar.masterworker.system.systemmaster.ArrayTransposeMaster;
-import com.iluwatar.masterworker.system.systemmaster.Master;
 
 /**
- * Class ArrayTransposeMasterWorker extends abstract class {@link MasterWorker} and specifically
- * solves the problem of finding transpose of input array.
+ * Entry point for clients of the master-worker system: hand it a matrix, get back its transpose,
+ * computed in parallel across worker threads.
  */
-public class ArrayTransposeMasterWorker extends MasterWorker {
+public class ArrayTransposeMasterWorker {
+
+  private final ArrayTransposeMaster master;
 
   public ArrayTransposeMasterWorker() {
-    super(4);
+    this.master = new ArrayTransposeMaster(4);
   }
 
-  @Override
-  Master setMaster(int numOfWorkers) {
-    return new ArrayTransposeMaster(numOfWorkers);
+  public ArrayResult getResult(ArrayInput input) {
+    this.master.doWork(input);
+    return this.master.getFinalResult();
   }
 }

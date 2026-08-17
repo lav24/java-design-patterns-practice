@@ -24,10 +24,12 @@
  */
 package com.iluwatar.masterworker;
 
-/** Class ArrayResult extends abstract class {@link Result} and contains data of type int[][]. */
-public class ArrayResult extends Result<int[][]> {
+/** Wraps a matrix produced by a worker (a chunk), or by the master (the final assembled result). */
+public class ArrayResult {
+
+  public final int[][] data;
 
   public ArrayResult(int[][] data) {
-    super(data);
+    this.data = data;
   }
 }

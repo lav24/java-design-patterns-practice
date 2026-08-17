@@ -28,11 +28,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/** Class ArrayInput extends abstract class {@link Input} and contains data of type int[][]. */
-public class ArrayInput extends Input<int[][]> {
+/**
+ * Wraps an input matrix and knows how to split itself into row-chunks so a {@link
+ * ArrayTransposeMaster} can hand one chunk to each worker.
+ */
+public class ArrayInput {
+
+  public final int[][] data;
 
   public ArrayInput(int[][] data) {
-    super(data);
+    this.data = data;
   }
 
   static int[] makeDivisions(int[][] data, int num) {
@@ -56,27 +61,24 @@ public class ArrayInput extends Input<int[][]> {
     return divisions;
   }
 
-  @Override
-  public List<Input<int[][]>> divideData(int num) {
+  /** Splits this matrix into (at most) {@code num} row-chunks. */
+  public List<ArrayInput> divideData(int num) {
     if (this.data == null) {
       return null;
-    } else {
-      var divisions = makeDivisions(this.data, num);
-      var result = new ArrayList<Input<int[][]>>(num);
-      var rowsDone = 0; // number of rows divided so far
-      for (var i = 0; i < num; i++) {
-        var rows = divisions[i];
-        if (rows != 0) {
-          var divided = new int[rows][this.data[0].length];
-          System.arraycopy(this.data, rowsDone, divided, 0, rows);
-          rowsDone += rows;
-          var dividedInput = new ArrayInput(divided);
-          result.add(dividedInput);
-        } else {
-          break; // rest of divisions will also be 0
-        }
-      }
-      return result;
     }
+    var divisions = makeDivisions(this.data, num);
+    var result = new ArrayList<ArrayInput>(num);
+    var rowsDone = 0; // number of rows divided so far
+    for (var i = 0; i < num; i++) {
+      var rows = divisions[i];
+      if (rows == 0) {
+        break; // rest of divisions will also be 0
+      }
+      var divided = new int[rows][this.data[0].length];
+      System.arraycopy(this.data, rowsDone, divided, 0, rows);
+      rowsDone += rows;
+      result.add(new ArrayInput(divided));
+    }
+    return result;
   }
 }

@@ -26,31 +26,45 @@ package com.iluwatar.masterworker.system.systemworkers;
 
 import com.iluwatar.masterworker.ArrayInput;
 import com.iluwatar.masterworker.ArrayResult;
-import com.iluwatar.masterworker.system.systemmaster.Master;
+import com.iluwatar.masterworker.system.systemmaster.ArrayTransposeMaster;
+import lombok.Getter;
 
 /**
- * Class ArrayTransposeWorker extends abstract class {@link Worker} and defines method
- * executeOperation(), to be performed on data received from master.
+ * A worker thread. Transposes the row-chunk of the matrix it was given, then reports the result
+ * back to its {@link ArrayTransposeMaster}.
  */
-public class ArrayTransposeWorker extends Worker {
+public class ArrayTransposeWorker extends Thread {
 
-  public ArrayTransposeWorker(Master master, int id) {
-    super(master, id);
+  private final ArrayTransposeMaster master;
+  @Getter private final int workerId;
+  private ArrayInput receivedData;
+
+  public ArrayTransposeWorker(ArrayTransposeMaster master, int id) {
+    this.master = master;
+    this.workerId = id;
   }
 
-  @Override
+  public void setReceivedData(ArrayTransposeMaster m, ArrayInput i) {
+    this.receivedData = i;
+  }
+
   ArrayResult executeOperation() {
-    // number of rows in result matrix is equal to number of columns in input matrix and vice versa
-    var arrayInput = (ArrayInput) this.getReceivedData();
-    final var rows = arrayInput.data[0].length;
-    final var cols = arrayInput.data.length;
+    // number of rows in result matrix equals number of columns in input matrix, and vice versa
+    var rows = receivedData.data[0].length;
+    var cols = receivedData.data.length;
     var resultData = new int[rows][cols];
     for (var i = 0; i < cols; i++) {
       for (var j = 0; j < rows; j++) {
         // flipping element positions along diagonal
-        resultData[j][i] = arrayInput.data[i][j];
+        resultData[j][i] = receivedData.data[i][j];
       }
     }
     return new ArrayResult(resultData);
+  }
+
+  @Override
+  public void run() {
+    var work = executeOperation();
+    master.receiveData(work, this);
   }
 }

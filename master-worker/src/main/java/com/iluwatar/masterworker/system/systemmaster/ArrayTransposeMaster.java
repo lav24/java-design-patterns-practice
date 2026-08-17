@@ -24,50 +24,81 @@
  */
 package com.iluwatar.masterworker.system.systemmaster;
 
+import com.iluwatar.masterworker.ArrayInput;
 import com.iluwatar.masterworker.ArrayResult;
 import com.iluwatar.masterworker.system.systemworkers.ArrayTransposeWorker;
-import com.iluwatar.masterworker.system.systemworkers.Worker;
 import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import lombok.Getter;
 
 /**
- * Class ArrayTransposeMaster extends abstract class {@link Master} and contains definition of
- * aggregateData, which will obtain final result from all data obtained and for setWorkers.
+ * Splits an input matrix across {@link ArrayTransposeWorker} threads, waits for all of them to
+ * finish, then reassembles their partial results into the final transposed matrix.
  */
-public class ArrayTransposeMaster extends Master {
+public class ArrayTransposeMaster {
+
+  private final int numOfWorkers;
+  private final List<ArrayTransposeWorker> workers;
+  private final Hashtable<Integer, ArrayResult> allResultData;
+  private int expectedNumResults;
+  @Getter private ArrayResult finalResult;
+
   public ArrayTransposeMaster(int numOfWorkers) {
-    super(numOfWorkers);
+    this.numOfWorkers = numOfWorkers;
+    this.workers =
+        IntStream.range(0, numOfWorkers)
+            // ith worker gets id i+1
+            .mapToObj(i -> new ArrayTransposeWorker(this, i + 1))
+            .collect(Collectors.toCollection(() -> new ArrayList<>(numOfWorkers)));
+    this.allResultData = new Hashtable<>(numOfWorkers);
   }
 
-  @Override
-  ArrayList<Worker> setWorkers(int num) {
-    // i+1 will be id
-    return IntStream.range(0, num)
-        .mapToObj(i -> new ArrayTransposeWorker(this, i + 1))
-        .collect(Collectors.toCollection(() -> new ArrayList<>(num)));
+  public void doWork(ArrayInput input) {
+    var dividedInput = input.divideData(numOfWorkers);
+    if (dividedInput == null) {
+      return;
+    }
+    this.expectedNumResults = dividedInput.size();
+    for (var i = 0; i < this.expectedNumResults; i++) {
+      // ith division given to ith worker in this.workers
+      this.workers.get(i).setReceivedData(this, dividedInput.get(i));
+      this.workers.get(i).start();
+    }
+    for (var i = 0; i < this.expectedNumResults; i++) {
+      try {
+        this.workers.get(i).join();
+      } catch (InterruptedException e) {
+        System.err.println("Error while executing thread");
+      }
+    }
   }
 
-  @Override
-  ArrayResult aggregateData() {
-    // number of rows in final result is number of rows in any of obtained results from workers
-    var allResultData = this.getAllResultData();
-    var rows = ((ArrayResult) allResultData.elements().nextElement()).data.length;
-    var elements = allResultData.elements();
+  public void receiveData(ArrayResult data, ArrayTransposeWorker w) {
+    this.allResultData.put(w.getWorkerId(), data);
+    if (this.allResultData.size() == this.expectedNumResults) {
+      // all data received
+      this.finalResult = aggregateData();
+    }
+  }
+
+  private ArrayResult aggregateData() {
+    // number of rows in final result is number of rows in any of the obtained results
+    var rows = this.allResultData.elements().nextElement().data.length;
     var columns = 0; // columns = sum of number of columns in all results obtained from workers
-    while (elements.hasMoreElements()) {
-      columns += ((ArrayResult) elements.nextElement()).data[0].length;
+    for (var result : this.allResultData.values()) {
+      columns += result.data[0].length;
     }
     var resultData = new int[rows][columns];
     var columnsDone = 0; // columns aggregated so far
-    var workers = this.getWorkers();
-    for (var i = 0; i < this.getExpectedNumResults(); i++) {
+    for (var i = 0; i < this.expectedNumResults; i++) {
       // result obtained from ith worker
-      var worker = workers.get(i);
-      var workerId = worker.getWorkerId();
-      var work = ((ArrayResult) allResultData.get(workerId)).data;
+      var workerId = this.workers.get(i).getWorkerId();
+      var work = this.allResultData.get(workerId).data;
       for (var m = 0; m < work.length; m++) {
-        // m = row number, n = columns number
+        // m = row number, n = column number
         System.arraycopy(work[m], 0, resultData[m], columnsDone, work[0].length);
       }
       columnsDone += work[0].length;
