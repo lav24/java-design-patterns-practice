@@ -1,0 +1,6 @@
+Master-Worker: how to code it (reference for this project)
+
+1. Master splits work into independent chunks, dispatches one per worker, blocks on a barrier until all workers finish, then aggregates — workers never talk to each other or to anything but the master.
+2. Reassemble results by chunk/worker index, not by arrival order — thread/goroutine completion order is non-deterministic, so aggregating by insertion order silently makes output non-reproducible.
+3. Use the language's built-in concurrency primitives for dispatch+barrier+collect (ExecutorService/Future+CompletableFuture in Java, goroutines+sync.WaitGroup in Go) instead of hand-rolled Thread/join plus a synchronized map.
+4. Only introduce an abstract Master/Worker/Input/Result hierarchy if there are genuinely multiple concrete implementations to share it — collapse abstract-base-with-one-subclass into a single concrete class.
