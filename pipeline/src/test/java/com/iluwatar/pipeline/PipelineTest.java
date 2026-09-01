@@ -34,9 +34,9 @@ class PipelineTest {
   @Test
   void testAddHandlersToPipeline() {
     var filters =
-        new Pipeline<>(new RemoveAlphabetsHandler())
-            .addHandler(new RemoveDigitsHandler())
-            .addHandler(new ConvertToCharArrayHandler());
+        new Pipeline<>(App.removeAlphabets())
+            .addHandler(App.removeDigits())
+            .addHandler(App.toCharArray());
 
     assertArrayEquals(
         new char[] {'#', '!', '(', '&', '%', '#', '!'}, filters.execute("#H!E(L&L0O%THE3R#34E!"));

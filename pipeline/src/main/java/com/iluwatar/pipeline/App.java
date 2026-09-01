@@ -24,6 +24,7 @@
  */
 package com.iluwatar.pipeline;
 
+import java.util.Arrays;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -33,44 +34,46 @@ import lombok.extern.slf4j.Slf4j;
  * assembled item is passed from one assembly stage to another. The outputs of the assembly line
  * occur in the same order as that of the inputs.
  *
- * <p>Classes used in this example are suffixed with "Handlers", and synonymously refers to the
- * "stage".
+ * <p>{@link Handler} has exactly one method, so each stage below is just a lambda implementing it
+ * — there's no need for a separate named class per stage.
  */
 @Slf4j
 public class App {
+
+  /** Stage: removes every alphabetic character from the input string. */
+  static Handler<String, String> removeAlphabets() {
+    return input -> {
+      var result = new StringBuilder();
+      input.chars().filter(c -> !Character.isAlphabetic(c)).forEachOrdered(c -> result.append((char) c));
+      return result.toString();
+    };
+  }
+
+  /** Stage: removes every digit character from the input string. */
+  static Handler<String, String> removeDigits() {
+    return input -> {
+      var result = new StringBuilder();
+      input.chars().filter(c -> !Character.isDigit(c)).forEachOrdered(c -> result.append((char) c));
+      return result.toString();
+    };
+  }
+
+  /** Stage: converts the input string to a char array. */
+  static Handler<String, char[]> toCharArray() {
+    return String::toCharArray;
+  }
+
   /**
    * Specify the initial input type for the first stage handler and the expected output type of the
    * last stage handler as type parameters for Pipeline. Use the fluent builder by calling
    * addHandler to add more stage handlers on the pipeline.
    */
   public static void main(String[] args) {
-    /*
-     Suppose we wanted to pass through a String to a series of filtering stages and convert it
-     as a char array on the last stage.
-
-     - Stage handler 1 (pipe): Removing the alphabets, accepts a String input and returns the
-     processed String output. This will be used by the next handler as its input.
-
-     - Stage handler 2 (pipe): Removing the digits, accepts a String input and returns the
-     processed String output. This shall also be used by the last handler we have.
-
-     - Stage handler 3 (pipe): Converting the String input to a char array handler. We would
-     be returning a different type in here since that is what's specified by the requirement.
-     This means that at any stages along the pipeline, the handler can return any type of data
-     as long as it fulfills the requirements for the next handler's input.
-
-     Suppose we wanted to add another handler after ConvertToCharArrayHandler. That handler
-     then is expected to receive an input of char[] array since that is the type being returned
-     by the previous handler, ConvertToCharArrayHandler.
-    */
     LOGGER.info("Creating pipeline");
-    var filters =
-        new Pipeline<>(new RemoveAlphabetsHandler())
-            .addHandler(new RemoveDigitsHandler())
-            .addHandler(new ConvertToCharArrayHandler());
+    var filters = new Pipeline<>(removeAlphabets()).addHandler(removeDigits()).addHandler(toCharArray());
     var input = "GoYankees123!";
     LOGGER.info("Executing pipeline with input: {}", input);
     var output = filters.execute(input);
-    LOGGER.info("Pipeline output: {}", output);
+    LOGGER.info("Pipeline output: {}", Arrays.toString(output));
   }
 }
